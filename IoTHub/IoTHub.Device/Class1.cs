@@ -21,6 +21,8 @@ namespace IoT_Agent
             this.opc_client = opcClient;
         }
 
+        #region D2C MESSAGE
+
         public async Task D2C_Message()
         {
             opc_client.Connect();
@@ -64,6 +66,9 @@ namespace IoT_Agent
             //opc_client.Disconnect();
         }
 
+        #endregion
+
+        #region DEVICE TWIN
         public async Task UpdateTwinAsync()
         {
             opc_client.Connect();
@@ -95,14 +100,58 @@ namespace IoT_Agent
 
             int desiredProductionRate = desiredProperties["ProductionRate"];
 
-            Console.WriteLine(desiredProductionRate.GetType());
-
-            opc_client.WriteNode("ns=2;s=Device 1/ProductionRate", desiredProductionRate);
+            opc_client.WriteNode("ns=2;s=Device 1/ProductionRate", desiredProductionRate); // nie wiem czy nie bedzie trzeba tez ustawić reported, ale to troche bez sensu, bo juz odczytujemy to UpdateTwin()
         }
+
+        #endregion
+
+        #region DIRECT METHODS
+
+        private async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
+        {
+            Console.WriteLine($"\t DEFAULT METHOD EXECUTED: {methodRequest.Name}");
+            await Task.Delay(1000);
+            return new MethodResponse(0);
+        }
+
+        private async Task<MethodResponse> EmergencyStopHandler(MethodRequest methodRequest, object userContext)
+        {
+            opc_client.Connect();
+
+            opc_client.CallMethod("ns=2;s=Device 1", "ns=2;s=Device 1/EmergencyStop");
+
+            Console.WriteLine("EMERGENCY STOP!");
+
+            opc_client.Disconnect();
+
+            await Task.Delay(1000);
+            return new MethodResponse(0);
+        }
+
+        private async Task<MethodResponse> ResetErrorStatus(MethodRequest methodRequest, object userContext)
+        {
+            opc_client.Connect();
+
+            opc_client.CallMethod("ns=2;s=Device 1", "ns=2;s=Device 1/ResetErrorStatus");
+
+            Console.WriteLine("RESSETING ERRORS");
+
+            opc_client.Disconnect();
+
+            await Task.Delay(1000);
+            return new MethodResponse(0);
+        }
+
+        #endregion
 
         public async Task InitializeHandlers()
         {
             await azure_client.SetDesiredPropertyUpdateCallbackAsync(OnDesirePropertyChange, azure_client);
+
+            await azure_client.SetMethodDefaultHandlerAsync(DefaultServiceHandler, azure_client);
+
+            await azure_client.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, azure_client);
+            await azure_client.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatus, azure_client);
         }
     }
 }
