@@ -63,6 +63,8 @@ namespace IoT_Agent
 
             await azure_client.SendEventAsync(eventMessage);
 
+            //await UpdateTwinAsync();
+
             //opc_client.Disconnect();
         }
 
@@ -76,17 +78,58 @@ namespace IoT_Agent
             OpcReadNode productionRateNode = new OpcReadNode("ns=2;s=Device 1/ProductionRate");
             OpcValue productionRateRead = opc_client.ReadNode(productionRateNode);
 
+            OpcReadNode deviceErrorsNode = new OpcReadNode("ns=2;s=Device 1/DeviceError");
+            int deviceErrorsRead = opc_client.ReadNode(deviceErrorsNode).As<int>();
+
+            var errorString = "";
+            if(deviceErrorsRead == 0){
+                errorString = "None";
+            }
+            else{
+                if(deviceErrorsRead - 8 >=0){
+                    errorString += "[Unknown Error] ";
+                    deviceErrorsRead -= 8;
+                }
+                if(deviceErrorsRead - 4 >= 0){
+                    errorString += "[Sensor Failure] ";
+                    deviceErrorsRead -= 4;
+                }
+                if(deviceErrorsRead - 2 >= 0){
+                    errorString += "[Power Failure] ";
+                    deviceErrorsRead -= 2;
+                }
+                if(deviceErrorsRead - 1 >= 0){
+                    errorString += "[Emergency Stop] ";
+                    deviceErrorsRead -= 1;
+                }
+            }
+
             var twin = await azure_client.GetTwinAsync();
-            Console.WriteLine($"\t Initial twin value recived: \n {JsonConvert.SerializeObject(twin, Formatting.Indented)}");
-            Console.WriteLine();
 
             var reportedProperties = new TwinCollection();
             reportedProperties["ProductionRate"] = productionRateRead.Value;
+
+
+            if (twin.Properties.Reported["deviceErrors"] != errorString){
+                reportedProperties["deviceErrors"] = errorString;
+
+                var data = new
+                {
+                    device_errors = errorString
+                };
+
+                var dataString = JsonConvert.SerializeObject(data);
+                Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
+                eventMessage.ContentType = MediaTypeNames.Application.Json;
+                eventMessage.ContentEncoding = "utf-8";
+
+                Console.WriteLine("ERROR message sent!");
+
+                await azure_client.SendEventAsync(eventMessage);
+            }
+
             await azure_client.UpdateReportedPropertiesAsync(reportedProperties);
 
-            twin = await azure_client.GetTwinAsync();
-            Console.WriteLine($"\t After update twin value recived: \n {JsonConvert.SerializeObject(twin, Formatting.Indented)}");
-            Console.WriteLine();
 
             opc_client.Disconnect();
         }

@@ -22,7 +22,7 @@ await device.InitializeHandlers();
 
 await device.D2C_Message();
 
-//await device.UpdateTwinAsync();
+await device.UpdateTwinAsync();
 
 
 
