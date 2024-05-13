@@ -14,11 +14,13 @@ namespace IoT_Agent
 
         private readonly DeviceClient azure_client;
         private readonly OpcClient opc_client;
+        private readonly string device_name;
 
-        public Virtual_device(DeviceClient azureClient, OpcClient opcClient)
+        public Virtual_device(DeviceClient azureClient, OpcClient opcClient, string device_name)
         {
             this.azure_client = azureClient;
             this.opc_client = opcClient;
+            this.device_name = device_name;
         }
 
         #region D2C MESSAGE
@@ -27,10 +29,10 @@ namespace IoT_Agent
         {
             opc_client.Connect();
 
-            OpcReadNode productionStatusNode = new OpcReadNode("ns=2;s=Device 1/ProductionStatus");
-            OpcReadNode workerIdNode = new OpcReadNode("ns=2;s=Device 1/WorkorderId");
-            OpcReadNode goodCountNode = new OpcReadNode("ns=2;s=Device 1/GoodCount");
-            OpcReadNode badCountNode = new OpcReadNode("ns=2;s=Device 1/BadCount");
+            OpcReadNode productionStatusNode = new OpcReadNode($"ns=2;s={device_name}/ProductionStatus");
+            OpcReadNode workerIdNode = new OpcReadNode($"ns=2;s={device_name}/WorkorderId");
+            OpcReadNode goodCountNode = new OpcReadNode($"ns=2;s={device_name}/GoodCount");
+            OpcReadNode badCountNode = new OpcReadNode($"ns=2;s={device_name}/BadCount");
 
             OpcValue productionStatusRead = opc_client.ReadNode(productionStatusNode);
             OpcValue workerIdNodeRead = opc_client.ReadNode(workerIdNode);
@@ -75,10 +77,10 @@ namespace IoT_Agent
         {
             opc_client.Connect();
 
-            OpcReadNode productionRateNode = new OpcReadNode("ns=2;s=Device 1/ProductionRate");
+            OpcReadNode productionRateNode = new OpcReadNode($"ns=2;s={device_name}/ProductionRate");
             OpcValue productionRateRead = opc_client.ReadNode(productionRateNode);
 
-            OpcReadNode deviceErrorsNode = new OpcReadNode("ns=2;s=Device 1/DeviceError");
+            OpcReadNode deviceErrorsNode = new OpcReadNode($"ns=2;s={device_name}/DeviceError");
             int deviceErrorsRead = opc_client.ReadNode(deviceErrorsNode).As<int>();
 
             var errorString = "";
@@ -110,7 +112,7 @@ namespace IoT_Agent
             reportedProperties["ProductionRate"] = productionRateRead.Value;
 
 
-            if (twin.Properties.Reported["deviceErrors"] != errorString){
+            if (!twin.Properties.Reported.Contains("deviceErrors") || twin.Properties.Reported["deviceErrors"] != errorString){
                 reportedProperties["deviceErrors"] = errorString;
 
                 var data = new
@@ -123,7 +125,7 @@ namespace IoT_Agent
                 eventMessage.ContentType = MediaTypeNames.Application.Json;
                 eventMessage.ContentEncoding = "utf-8";
 
-                Console.WriteLine("ERROR message sent!");
+                Console.WriteLine(errorString);
 
                 await azure_client.SendEventAsync(eventMessage);
             }
@@ -131,7 +133,7 @@ namespace IoT_Agent
             await azure_client.UpdateReportedPropertiesAsync(reportedProperties);
 
 
-            opc_client.Disconnect();
+            //opc_client.Disconnect();
         }
 
         private async Task OnDesirePropertyChange(TwinCollection desiredProperties, object userContext)
@@ -143,7 +145,7 @@ namespace IoT_Agent
 
             int desiredProductionRate = desiredProperties["ProductionRate"];
 
-            opc_client.WriteNode("ns=2;s=Device 1/ProductionRate", desiredProductionRate); // nie wiem czy nie bedzie trzeba tez ustawić reported, ale to troche bez sensu, bo juz odczytujemy to UpdateTwin()
+            opc_client.WriteNode($"ns=2;s={device_name}/ProductionRate", desiredProductionRate); // nie wiem czy nie bedzie trzeba tez ustawić reported, ale to troche bez sensu, bo juz odczytujemy to UpdateTwin()
         }
 
         #endregion
@@ -161,7 +163,7 @@ namespace IoT_Agent
         {
             opc_client.Connect();
 
-            opc_client.CallMethod("ns=2;s=Device 1", "ns=2;s=Device 1/EmergencyStop");
+            opc_client.CallMethod($"ns=2;s={device_name}", $"ns=2;s={device_name}/EmergencyStop");
 
             Console.WriteLine("EMERGENCY STOP!");
 
@@ -175,7 +177,7 @@ namespace IoT_Agent
         {
             opc_client.Connect();
 
-            opc_client.CallMethod("ns=2;s=Device 1", "ns=2;s=Device 1/ResetErrorStatus");
+            opc_client.CallMethod($"ns=2;s={device_name}", $"ns=2;s={device_name}/ResetErrorStatus");
 
             Console.WriteLine("RESSETING ERRORS");
 
@@ -195,6 +197,16 @@ namespace IoT_Agent
 
             await azure_client.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, azure_client);
             await azure_client.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatus, azure_client);
+        }
+
+        public async Task testElo()
+        {
+            var twin = await azure_client.GetTwinAsync();
+
+            var reportedProperties = new TwinCollection();
+            reportedProperties["deviceErrors"] = null;
+            await azure_client.UpdateReportedPropertiesAsync(reportedProperties);
+            Console.WriteLine("zrobioned");
         }
     }
 }
