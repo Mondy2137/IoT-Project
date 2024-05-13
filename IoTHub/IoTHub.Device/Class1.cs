@@ -52,7 +52,7 @@ namespace IoT_Agent
 
             var data = new
             {
-                temperature = temperatureRead
+                temperature = temperatureRead,
                 production_status = productionStatusValue,
                 worker_id = workerIdNodeValue,
                 good_count = goodCountValue,
