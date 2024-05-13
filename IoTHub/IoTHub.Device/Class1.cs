@@ -33,11 +33,13 @@ namespace IoT_Agent
             OpcReadNode workerIdNode = new OpcReadNode($"ns=2;s={device_name}/WorkorderId");
             OpcReadNode goodCountNode = new OpcReadNode($"ns=2;s={device_name}/GoodCount");
             OpcReadNode badCountNode = new OpcReadNode($"ns=2;s={device_name}/BadCount");
+            OpcReadNode temperatureNode = new OpcReadNode($"ns=2;s={device_name}/Temperature");
 
             OpcValue productionStatusRead = opc_client.ReadNode(productionStatusNode);
             OpcValue workerIdNodeRead = opc_client.ReadNode(workerIdNode);
             OpcValue goodCountRead = opc_client.ReadNode(goodCountNode);
             OpcValue badCountRead = opc_client.ReadNode(badCountNode);
+            OpcValue temperatureRead = opc_client.ReadNode(temperatureNode);
 
             var productionStatusValue = productionStatusRead.Value;
             var workerIdNodeValue = workerIdNodeRead.Value;
@@ -50,6 +52,7 @@ namespace IoT_Agent
 
             var data = new
             {
+                temperature = temperatureRead
                 production_status = productionStatusValue,
                 worker_id = workerIdNodeValue,
                 good_count = goodCountValue,
