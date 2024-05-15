@@ -49,10 +49,12 @@ namespace IoT_Agent
             }
             var goodCountValue = goodCountRead.Value;
             var badCountValue = badCountRead.Value;
+            var temperatureValue = temperatureRead.Value;
 
             var data = new
             {
-                temperature = temperatureRead,
+                device = device_name,
+                temperature = temperatureValue,
                 production_status = productionStatusValue,
                 worker_id = workerIdNodeValue,
                 good_count = goodCountValue,
