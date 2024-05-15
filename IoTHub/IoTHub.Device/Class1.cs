@@ -69,10 +69,6 @@ namespace IoT_Agent
             Console.WriteLine("D2C message sent!");
 
             await azure_client.SendEventAsync(eventMessage);
-
-            //await UpdateTwinAsync();
-
-            //opc_client.Disconnect();
         }
 
         #endregion
@@ -89,6 +85,7 @@ namespace IoT_Agent
             int deviceErrorsRead = opc_client.ReadNode(deviceErrorsNode).As<int>();
 
             var errorString = "";
+            var errorCounter = 0;
             if(deviceErrorsRead == 0){
                 errorString = "None";
             }
@@ -96,18 +93,22 @@ namespace IoT_Agent
                 if(deviceErrorsRead - 8 >=0){
                     errorString += "[Unknown Error] ";
                     deviceErrorsRead -= 8;
+                    errorCounter++;
                 }
                 if(deviceErrorsRead - 4 >= 0){
                     errorString += "[Sensor Failure] ";
                     deviceErrorsRead -= 4;
+                    errorCounter++;
                 }
                 if(deviceErrorsRead - 2 >= 0){
                     errorString += "[Power Failure] ";
                     deviceErrorsRead -= 2;
+                    errorCounter++;
                 }
                 if(deviceErrorsRead - 1 >= 0){
                     errorString += "[Emergency Stop] ";
                     deviceErrorsRead -= 1;
+                    errorCounter++;
                 }
             }
 
@@ -118,27 +119,29 @@ namespace IoT_Agent
 
 
             if (!twin.Properties.Reported.Contains("deviceErrors") || twin.Properties.Reported["deviceErrors"] != errorString){
+                
                 reportedProperties["deviceErrors"] = errorString;
 
-                var data = new
+                if (errorString != "None")
                 {
-                    device_errors = errorString
-                };
+                    var data = new
+                    {
+                        device_errors = errorString,
+                        error_count = errorCounter
+                    };
 
-                var dataString = JsonConvert.SerializeObject(data);
-                Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
-                eventMessage.ContentType = MediaTypeNames.Application.Json;
-                eventMessage.ContentEncoding = "utf-8";
+                    var dataString = JsonConvert.SerializeObject(data);
+                    Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
+                    eventMessage.ContentType = MediaTypeNames.Application.Json;
+                    eventMessage.ContentEncoding = "utf-8";
 
-                Console.WriteLine(errorString);
+                    Console.WriteLine(errorString);
 
-                await azure_client.SendEventAsync(eventMessage);
+                    await azure_client.SendEventAsync(eventMessage);
+                }
             }
 
             await azure_client.UpdateReportedPropertiesAsync(reportedProperties);
-
-
-            //opc_client.Disconnect();
         }
 
         private async Task OnDesirePropertyChange(TwinCollection desiredProperties, object userContext)
@@ -150,7 +153,7 @@ namespace IoT_Agent
 
             int desiredProductionRate = desiredProperties["ProductionRate"];
 
-            opc_client.WriteNode($"ns=2;s={device_name}/ProductionRate", desiredProductionRate); // nie wiem czy nie bedzie trzeba tez ustawić reported, ale to troche bez sensu, bo juz odczytujemy to UpdateTwin()
+            opc_client.WriteNode($"ns=2;s={device_name}/ProductionRate", desiredProductionRate);
         }
 
         #endregion
@@ -184,7 +187,7 @@ namespace IoT_Agent
 
             opc_client.CallMethod($"ns=2;s={device_name}", $"ns=2;s={device_name}/ResetErrorStatus");
 
-            Console.WriteLine("RESSETING ERRORS");
+            Console.WriteLine("RESETING ERRORS");
 
             opc_client.Disconnect();
 
@@ -202,16 +205,6 @@ namespace IoT_Agent
 
             await azure_client.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, azure_client);
             await azure_client.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatus, azure_client);
-        }
-
-        public async Task testElo()
-        {
-            var twin = await azure_client.GetTwinAsync();
-
-            var reportedProperties = new TwinCollection();
-            reportedProperties["deviceErrors"] = null;
-            await azure_client.UpdateReportedPropertiesAsync(reportedProperties);
-            Console.WriteLine("zrobioned");
         }
     }
 }

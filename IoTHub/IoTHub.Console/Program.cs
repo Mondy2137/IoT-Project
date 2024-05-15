@@ -45,7 +45,4 @@ while (true)
 
 
 
-//await device.testElo();
-
-
 Console.ReadLine();
