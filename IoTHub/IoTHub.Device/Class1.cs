@@ -27,7 +27,7 @@ namespace IoT_Agent
 
         public async Task D2C_Message()
         {
-            opc_client.Connect();
+            //opc_client.Connect();
 
             OpcReadNode productionStatusNode = new OpcReadNode($"ns=2;s={device_name}/ProductionStatus");
             OpcReadNode workerIdNode = new OpcReadNode($"ns=2;s={device_name}/WorkorderId");
@@ -76,7 +76,7 @@ namespace IoT_Agent
         #region DEVICE TWIN
         public async Task UpdateTwinAsync()
         {
-            opc_client.Connect();
+            //opc_client.Connect();
 
             OpcReadNode productionRateNode = new OpcReadNode($"ns=2;s={device_name}/ProductionRate");
             OpcValue productionRateRead = opc_client.ReadNode(productionRateNode);
@@ -170,13 +170,13 @@ namespace IoT_Agent
 
         private async Task<MethodResponse> EmergencyStopHandler(MethodRequest methodRequest, object userContext)
         {
-            opc_client.Connect();
+            //opc_client.Connect();
 
             opc_client.CallMethod($"ns=2;s={device_name}", $"ns=2;s={device_name}/EmergencyStop");
 
             Console.WriteLine("EMERGENCY STOP!");
 
-            opc_client.Disconnect();
+            //opc_client.Disconnect();
 
             await Task.Delay(1000);
             return new MethodResponse(0);
@@ -184,13 +184,13 @@ namespace IoT_Agent
 
         private async Task<MethodResponse> ResetErrorStatus(MethodRequest methodRequest, object userContext)
         {
-            opc_client.Connect();
+            //opc_client.Connect();
 
             opc_client.CallMethod($"ns=2;s={device_name}", $"ns=2;s={device_name}/ResetErrorStatus");
 
             Console.WriteLine("RESETING ERRORS");
 
-            opc_client.Disconnect();
+            //opc_client.Disconnect();
 
             await Task.Delay(1000);
             return new MethodResponse(0);

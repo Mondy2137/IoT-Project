@@ -69,6 +69,7 @@ await device.InitializeHandlers();
 while (true)
 {
     await device.UpdateTwinAsync();
-    System.Threading.Thread.Sleep(1000);
+    await device.D2C_Message();
+    System.Threading.Thread.Sleep(10000);
 }
 Console.ReadLine();
