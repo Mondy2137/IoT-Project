@@ -126,6 +126,7 @@ namespace IoT_Agent
                 {
                     var data = new
                     {
+                        error_device = device_name,
                         device_errors = errorString,
                         error_count = errorCounter
                     };

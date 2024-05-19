@@ -1,48 +1,74 @@
 ﻿using System.Net.Sockets;
 using IoT_Agent;
 using Microsoft.Azure.Devices.Client;
+using Opc.Ua;
+using Opc.UaFx;
 using Opc.UaFx.Client;
 
-Console.WriteLine("Connection string to Azure IoT");
-var testCString = Console.ReadLine();
 
-Console.WriteLine("Device name in OPC UA:");
-var testDeviceName = Console.ReadLine();
-
-
-
-//testCString;
-
-string deviceConnectionStringAzure = "HostName=UL-zajecia-IoT.azure-devices.net;DeviceId=test_device;SharedAccessKey=/yDZTwWCjiKGayFrVZA95jIDZOzSSISY3AIoTI7xejA=";
-using var deviceClientAzure = DeviceClient.CreateFromConnectionString(deviceConnectionStringAzure, TransportType.Mqtt);
-
-string deviceConnectionStringOpc = "opc.tcp://localhost:4840/";
-using var deviceClientOpcUa = new OpcClient(deviceConnectionStringOpc);
-Console.WriteLine("Connection to OPC UA Client successfull!");
-
-await deviceClientAzure.OpenAsync();
-var device = new Virtual_device(deviceClientAzure, deviceClientOpcUa, testDeviceName);
-Console.WriteLine("Connection to Azure successfull!");
-
-await device.InitializeHandlers();
-
-//await device.D2C_Message();
-
-//await device.UpdateTwinAsync();
-
-//System.Threading.Thread.Sleep(5000);
-
-
-
-//await device.D2C_Message();
-
+DeviceClient deviceClientAzure = null;
 while (true)
 {
-    await device.D2C_Message();
-    await device.UpdateTwinAsync();
-    System.Threading.Thread.Sleep(60000);
+    Console.WriteLine("\nConnection string to Azure IoT:");
+    var azureCString = Console.ReadLine();
+   
+    try
+    {
+        string deviceConnectionStringAzure = azureCString; //"HostName=UL-zajecia-IoT.azure-devices.net;DeviceId=test_device;SharedAccessKey=/yDZTwWCjiKGayFrVZA95jIDZOzSSISY3AIoTI7xejA=";
+        deviceClientAzure = DeviceClient.CreateFromConnectionString(deviceConnectionStringAzure, TransportType.Mqtt);
+        break;
+    }
+    catch
+    {
+        Console.WriteLine("Connection failed. Please check connection string to Azure IoT or resolve other problems");
+    }
+}
+
+OpcClient deviceClientOpcUa = null;
+while (true)
+{
+    Console.WriteLine("\nConnection string to OPC UA:");
+    var opcCString = Console.ReadLine();
+
+    try
+    {
+        deviceClientOpcUa = new OpcClient(opcCString);
+        deviceClientOpcUa.Connect();
+        break;
+    }
+    catch
+    {
+        Console.WriteLine("Connection failed. Please check connection string to OPC UA server or resolve other problems");
+    }
+}
+
+var opcDeviceName = "";
+while (true)
+{
+    Console.WriteLine("\nDevice name in OPC UA:");
+    opcDeviceName = Console.ReadLine();
+
+    OpcReadNode deviceNameTest = new OpcReadNode($"ns=2;s={opcDeviceName}/ProductionStatus");
+    OpcValue testRead = deviceClientOpcUa.ReadNode(deviceNameTest);
+    if (testRead.ToString() == "null")
+    {
+        Console.WriteLine("There is no such device, please provide correct device name");
+    }
+    else
+    {
+        break;
+    }
 }
 
 
+await deviceClientAzure.OpenAsync();
+var device = new Virtual_device(deviceClientAzure, deviceClientOpcUa, opcDeviceName);
+Console.WriteLine("\nConnection successfull!\n");
 
+await device.InitializeHandlers();
+while (true)
+{
+    await device.UpdateTwinAsync();
+    System.Threading.Thread.Sleep(1000);
+}
 Console.ReadLine();
