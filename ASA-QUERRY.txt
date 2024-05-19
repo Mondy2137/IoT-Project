@@ -1,0 +1,48 @@
+				TELEMETRY:
+
+SELECT
+    *
+INTO
+    [telemetry]
+FROM
+    [UL-zajecia-IoT];
+
+
+				PRODUCTION KPI:
+SELECT
+   device AS Device, (( SUM(good_count) / (SUM(good_count) + SUM(bad_count))) * 100) AS prod_kpi 
+INTO
+    [kpi]
+FROM
+    [UL-zajecia-IoT]
+WHERE
+    device IS NOT NULL
+GROUP BY
+    device, TumblingWindow(minute, 5);
+
+
+				TEMPERATURE-AVG-MIN-MAX:
+SELECT
+    device AS Device, AVG(temperature) AS tempAvg, MIN(temperature) AS tempMin, MAX(temperature) AS tempMax
+INTO
+    [temperature]
+FROM
+    [UL-zajecia-IoT]
+WHERE
+    device IS NOT NULL
+GROUP BY
+    device, HoppingWindow(Duration(minute, 5), Hop(minute, 1));
+
+
+				DEVICE ERRORS
+SELECT
+    error_device AS Device, SUM(error_count) AS errorCount
+INTO
+    [errors]
+FROM
+    [UL-zajecia-IoT]
+WHERE
+    error_device IS NOT NULL
+GROUP BY
+    error_device, SlidingWindow(minute, 1)
+HAVING SUM(error_count) > 3
