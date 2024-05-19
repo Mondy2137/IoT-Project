@@ -5,7 +5,7 @@ using Opc.Ua;
 using Opc.UaFx;
 using Opc.UaFx.Client;
 
-
+#region Azure connection string validation
 DeviceClient deviceClientAzure = null;
 while (true)
 {
@@ -23,7 +23,9 @@ while (true)
         Console.WriteLine("Connection failed. Please check connection string to Azure IoT or resolve other problems");
     }
 }
+#endregion
 
+#region OPC UA connection string validation
 OpcClient deviceClientOpcUa = null;
 while (true)
 {
@@ -41,7 +43,9 @@ while (true)
         Console.WriteLine("Connection failed. Please check connection string to OPC UA server or resolve other problems");
     }
 }
+#endregion
 
+#region Device name validation
 var opcDeviceName = "";
 while (true)
 {
@@ -59,6 +63,7 @@ while (true)
         break;
     }
 }
+#endregion
 
 
 await deviceClientAzure.OpenAsync();
@@ -72,4 +77,3 @@ while (true)
     await device.D2C_Message();
     System.Threading.Thread.Sleep(10000);
 }
-Console.ReadLine();
